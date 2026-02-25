@@ -11,14 +11,6 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: '' };
   }
 
-  if (event.httpMethod !== 'GET') {
-    return { 
-      statusCode: 405, 
-      headers, 
-      body: JSON.stringify({ error: 'Method not allowed' }) 
-    };
-  }
-
   try {
     const auth = new google.auth.GoogleAuth({
       credentials: {
@@ -40,8 +32,10 @@ exports.handler = async (event) => {
     const rows = response.data.values || [];
     const records = {};
 
-    // Skip header row (assumes row 1 has headers)
-    for (let i = 1; i < rows.length; i++) {
+    // Skip header row if it exists
+    const startRow = (rows.length > 0 && rows[0][0] === 'Date') ? 1 : 0;
+    
+    for (let i = startRow; i < rows.length; i++) {
       const row = rows[i];
       if (row[0] && row[1] && row[3]) { // Date, StudentID, Period exist
         const key = `${row[1]}_${row[0]}_${row[3]}`;

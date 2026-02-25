@@ -11,14 +11,6 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: '' };
   }
 
-  if (event.httpMethod !== 'GET') {
-    return { 
-      statusCode: 405, 
-      headers, 
-      body: JSON.stringify({ error: 'Method not allowed' }) 
-    };
-  }
-
   try {
     const auth = new google.auth.GoogleAuth({
       credentials: {
