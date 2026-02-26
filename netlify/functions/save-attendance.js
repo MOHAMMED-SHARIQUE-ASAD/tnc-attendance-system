@@ -22,6 +22,21 @@ exports.handler = async (event) => {
       };
     }
 
+    console.log('Saving records:', records.length);
+
+    // Check if environment variables exist
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.SPREADSHEET_ID) {
+      console.error('Missing environment variables');
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ 
+          error: 'Missing Google Sheets credentials',
+          details: 'Check environment variables in Netlify'
+        })
+      };
+    }
+
     // Initialize Google Sheets API
     const auth = new google.auth.GoogleAuth({
       credentials: {
@@ -47,6 +62,8 @@ exports.handler = async (event) => {
       timestamp
     ]);
 
+    console.log('Appending to sheet:', values.length, 'rows');
+
     // Append to Attendance sheet
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId,
@@ -54,6 +71,8 @@ exports.handler = async (event) => {
       valueInputOption: 'USER_ENTERED',
       requestBody: { values }
     });
+
+    console.log('Save successful:', response.data);
 
     return {
       statusCode: 200,
@@ -72,7 +91,8 @@ exports.handler = async (event) => {
       headers,
       body: JSON.stringify({ 
         error: error.message,
-        details: error.toString()
+        details: error.toString(),
+        stack: error.stack
       })
     };
   }
