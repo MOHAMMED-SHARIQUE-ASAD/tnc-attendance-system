@@ -12,6 +12,8 @@ exports.handler = async (event) => {
   }
 
   try {
+    console.log('🔵 Getting attendance...');
+
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -30,14 +32,17 @@ exports.handler = async (event) => {
     });
 
     const rows = response.data.values || [];
+    console.log(`Found ${rows.length} rows in Attendance sheet`);
+
     const records = {};
 
     // Skip header row if it exists
-    const startRow = (rows.length > 0 && rows[0][0] === 'Date') ? 1 : 0;
-    
-    for (let i = startRow; i < rows.length; i++) {
+    for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       if (row[0] && row[1] && row[3]) { // Date, StudentID, Period exist
+        // Skip if first row looks like headers
+        if (i === 0 && row[0].toLowerCase?.() === 'date') continue;
+        
         const key = `${row[1]}_${row[0]}_${row[3]}`;
         records[key] = row[4]; // status
         records[key + '_faculty'] = row[5] || '';
@@ -46,6 +51,8 @@ exports.handler = async (event) => {
         records[key + '_timestamp'] = row[7] || '';
       }
     }
+
+    console.log(`Loaded ${Object.keys(records).filter(k => !k.includes('_')).length} attendance records`);
 
     return {
       statusCode: 200,

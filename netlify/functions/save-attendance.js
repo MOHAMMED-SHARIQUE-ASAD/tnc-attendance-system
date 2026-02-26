@@ -12,9 +12,14 @@ exports.handler = async (event) => {
   }
 
   try {
+    console.log('🔵 Function triggered');
+    console.log('Event body:', event.body);
+
     const { records } = JSON.parse(event.body);
-    
+    console.log('Records to save:', records?.length);
+
     if (!records || !Array.isArray(records)) {
+      console.error('❌ Invalid records data');
       return {
         statusCode: 400,
         headers,
@@ -22,22 +27,37 @@ exports.handler = async (event) => {
       };
     }
 
-    console.log('Saving records:', records.length);
-
-    // Check if environment variables exist
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.SPREADSHEET_ID) {
-      console.error('Missing environment variables');
+    // Check environment variables
+    console.log('Checking env vars...');
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+      console.error('❌ Missing GOOGLE_SERVICE_ACCOUNT_EMAIL');
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ 
-          error: 'Missing Google Sheets credentials',
-          details: 'Check environment variables in Netlify'
-        })
+        body: JSON.stringify({ error: 'Missing service account email' })
+      };
+    }
+    if (!process.env.GOOGLE_PRIVATE_KEY) {
+      console.error('❌ Missing GOOGLE_PRIVATE_KEY');
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Missing private key' })
+      };
+    }
+    if (!process.env.SPREADSHEET_ID) {
+      console.error('❌ Missing SPREADSHEET_ID');
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Missing spreadsheet ID' })
       };
     }
 
+    console.log('✅ Environment variables present');
+
     // Initialize Google Sheets API
+    console.log('Initializing Google Auth...');
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -48,6 +68,25 @@ exports.handler = async (event) => {
 
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = process.env.SPREADSHEET_ID;
+
+    // First, check if we can access the sheet
+    console.log('Testing sheet access...');
+    try {
+      const testResponse = await sheets.spreadsheets.get({
+        spreadsheetId
+      });
+      console.log('✅ Sheet access successful:', testResponse.data.properties.title);
+    } catch (testError) {
+      console.error('❌ Cannot access sheet:', testError.message);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ 
+          error: 'Cannot access Google Sheet',
+          details: 'Make sure sheet is shared with service account'
+        })
+      };
+    }
 
     // Prepare values for insertion
     const timestamp = new Date().toISOString();
@@ -63,6 +102,7 @@ exports.handler = async (event) => {
     ]);
 
     console.log('Appending to sheet:', values.length, 'rows');
+    console.log('First row sample:', values[0]);
 
     // Append to Attendance sheet
     const response = await sheets.spreadsheets.values.append({
@@ -72,7 +112,7 @@ exports.handler = async (event) => {
       requestBody: { values }
     });
 
-    console.log('Save successful:', response.data);
+    console.log('✅ Save successful:', response.data);
 
     return {
       statusCode: 200,
@@ -85,13 +125,13 @@ exports.handler = async (event) => {
     };
 
   } catch (error) {
-    console.error('Save attendance error:', error);
+    console.error('❌ Fatal error:', error);
+    console.error('Error stack:', error.stack);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: error.message,
-        details: error.toString(),
         stack: error.stack
       })
     };
