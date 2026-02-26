@@ -482,6 +482,240 @@ async function testConnection() {
     }
 }
 
+// ==================== EXPORT ATTENDANCE DATA ====================
+async function exportAttendance() {
+    showLoading();
+    try {
+        // Get all attendance data
+        const records = [];
+        
+        // Convert attendanceData to array format
+        Object.keys(attendanceData).forEach(key => {
+            if (!key.includes('_faculty') && !key.includes('_course') && !key.includes('_studentName') && !key.includes('_timestamp')) {
+                const [studentId, date, period] = key.split('_');
+                records.push({
+                    date: date,
+                    studentId: studentId,
+                    studentName: attendanceData[key + '_studentName'] || '',
+                    period: period,
+                    status: attendanceData[key],
+                    faculty: attendanceData[key + '_faculty'] || '',
+                    course: attendanceData[key + '_course'] || '',
+                    timestamp: attendanceData[key + '_timestamp'] || ''
+                });
+            }
+        });
+
+        // Convert to CSV
+        const csv = convertToCSV(records);
+        
+        // Download file
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `attendance_export_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        showNotification(`✅ Exported ${records.length} records`, 'success');
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        showNotification('❌ Export failed', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// ==================== IMPORT ATTENDANCE DATA ====================
+function importAttendance() {
+    // Create file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv,.xlsx,.xls';
+    
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        showLoading();
+        
+        try {
+            const reader = new FileReader();
+            
+            reader.onload = async (event) => {
+                try {
+                    const csvData = event.target.result;
+                    const records = parseCSV(csvData);
+                    
+                    if (records.length === 0) {
+                        showNotification('❌ No valid records found', 'error');
+                        hideLoading();
+                        return;
+                    }
+                    
+                    // Show preview and confirm
+                    if (confirm(`Found ${records.length} records. Import to Google Sheets?`)) {
+                        await saveBulkAttendance(records);
+                    } else {
+                        hideLoading();
+                    }
+                    
+                } catch (parseError) {
+                    console.error('Parse error:', parseError);
+                    showNotification('❌ Invalid file format', 'error');
+                    hideLoading();
+                }
+            };
+            
+            reader.readAsText(file);
+            
+        } catch (error) {
+            console.error('Import error:', error);
+            showNotification('❌ Import failed', 'error');
+            hideLoading();
+        }
+    };
+    
+    input.click();
+}
+
+// ==================== CONVERT TO CSV ====================
+function convertToCSV(data) {
+    if (data.length === 0) return '';
+    
+    const headers = ['Date', 'StudentID', 'StudentName', 'Period', 'Status', 'Faculty', 'Course', 'Timestamp'];
+    const csvRows = [];
+    
+    // Add headers
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    data.forEach(row => {
+        const values = headers.map(header => {
+            const value = row[header.toLowerCase()] || '';
+            return `"${value.toString().replace(/"/g, '""')}"`; // Escape quotes
+        });
+        csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+}
+
+// ==================== PARSE CSV ====================
+function parseCSV(csvText) {
+    const lines = csvText.split('\n');
+    if (lines.length < 2) return [];
+    
+    const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim().toLowerCase());
+    const records = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        
+        // Simple CSV parsing (works for basic CSVs)
+        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+        const record = {};
+        
+        headers.forEach((header, index) => {
+            if (values[index]) {
+                record[header] = values[index];
+            }
+        });
+        
+        // Validate required fields
+        if (record.date && record.studentid && record.status) {
+            records.push({
+                date: record.date,
+                studentId: record.studentid,
+                studentName: record.studentname || '',
+                period: record.period || '1',
+                status: record.status,
+                faculty: record.faculty || 'System Import',
+                course: record.course || 'Imported'
+            });
+        }
+    }
+    
+    return records;
+}
+
+// ==================== SAVE BULK ATTENDANCE ====================
+async function saveBulkAttendance(records) {
+    showLoading();
+    try {
+        const response = await fetch(API.saveAttendance, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ records })
+        });
+        
+        const result = await response.json();
+        
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        
+        if (result.success) {
+            // Update local data
+            records.forEach(record => {
+                const key = `${record.studentId}_${record.date}_${record.period}`;
+                attendanceData[key] = record.status;
+                attendanceData[key + '_faculty'] = record.faculty;
+                attendanceData[key + '_course'] = record.course;
+                attendanceData[key + '_studentName'] = record.studentName;
+            });
+            
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceData));
+            showNotification(`✅ Imported ${records.length} records!`, 'success');
+            
+            // Refresh data
+            setTimeout(async () => {
+                await loadAttendanceFromSheet();
+            }, 1000);
+        }
+        
+    } catch (error) {
+        console.error('Bulk save error:', error);
+        showNotification('❌ Import failed', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// ==================== EXPORT STUDENT LIST ====================
+function exportStudents() {
+    if (studentsList.length === 0) {
+        showNotification('No students to export', 'info');
+        return;
+    }
+    
+    // Format student data for export
+    const studentData = studentsList.map(s => ({
+        'Register No': s.reg,
+        'Name': s.name,
+        'Batch': s.batch || 'A',
+        'Year': s.year || '1st'
+    }));
+    
+    const csv = convertToCSV(studentData);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `students_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    showNotification(`✅ Exported ${studentsList.length} students`, 'success');
+}
 // ============ ADD ALL THESE NEW FUNCTIONS AFTER testConnection ============
 
 // ==================== EXPORT ATTENDANCE DATA ====================
@@ -1247,7 +1481,7 @@ function exportStudents() {
             return times[period] || '';
         }
 
-        // ==================== STAFF DASHBOARD ====================
+// ==================== STAFF DASHBOARD ====================
 function showStaffDashboard() {
     const content = document.getElementById('mainContent');
     
@@ -1305,7 +1539,6 @@ function showStaffDashboard() {
         </div>
     `;
 }
-
         // ==================== MARK ATTENDANCE PAGE ====================
         async function showMarkAttendance() {
             const content = document.getElementById('mainContent');
