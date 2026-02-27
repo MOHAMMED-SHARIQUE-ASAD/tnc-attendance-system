@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Import Staff to Firebase</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        h1 { color: #8B0000; }
+        button { background: #8B0000; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; }
+        .success { color: green; margin: 10px 0; }
+    </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>📥 Import Staff to Firebase</h1>
+        <button onclick="importStaff()">🚀 IMPORT STAFF</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDUdv62x0byBLjaTb9i2k_yB5-RVEF3s8M",
+            authDomain: "attendance-app-dfa79.firebaseapp.com",
+            projectId: "attendance-app-dfa79",
+            storageBucket: "attendance-app-dfa79.firebasestorage.app",
+            messagingSenderId: "713117014534",
+            appId: "1:713117014534:web:56edbc2c1b88b0611a0187"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function importStaff() {
+            document.getElementById('status').innerHTML = '⏳ Importing staff...';
+            
+            const staff = [
+                { name: 'Dr. P. Hakkim Divan Mydeen', email: 'p.hakkimdivanmydeen@thenewcollege.edu.in', password: 'staff', department: 'Computer Science', designation: 'Professor' },
+                { name: 'Mr. S.A. Abdul Kadhar', email: 'sa.abdulkadhar@thenewcollege.edu.in', password: 'staff', department: 'Computer Science', designation: 'Assistant Professor' },
+                { name: 'Mr. A. Ashraf Ali', email: 'a.ashrafali@thenewcollege.edu.in', password: 'staff', department: 'Computer Science', designation: 'Assistant Professor' },
+                { name: 'Dr. G. Najeeb Ahmed', email: 'g.najeebahmed@thenewcollege.edu.in', password: 'staff', department: 'Computer Science', designation: 'Professor' },
+                { name: 'Mr. M.M. Syed Sulaiman', email: 'mm.syedsulaiman@thenewcollege.edu.in', password: 'staff', department: 'Computer Science', designation: 'Associate Professor' }
+            ];
+
+            try {
+                const batch = db.batch();
+                staff.forEach(member => {
+                    const docRef = db.collection('staff').doc();
+                    batch.set(docRef, member);
+                });
+                await batch.commit();
+                document.getElementById('status').innerHTML = `✅ Imported ${staff.length} staff members!`;
+            } catch (error) {
+                document.getElementById('status').innerHTML = `❌ Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

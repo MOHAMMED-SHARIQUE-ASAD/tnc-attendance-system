@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Import Students to Firebase</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #8B0000; }
+        button { background: #8B0000; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; margin: 10px 0; }
+        button:hover { background: #B22222; }
+        .success { color: green; margin: 10px 0; }
+        .error { color: red; margin: 10px 0; }
+        textarea { width: 100%; height: 200px; margin: 10px 0; padding: 10px; font-family: monospace; }
+    </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>📥 Import Students to Firebase</h1>
+        <p>Click the button below to import ALL your students from the spreadsheet:</p>
+        
+        <button onclick="importAllStudents()">🚀 IMPORT ALL 43 STUDENTS</button>
+        
+        <div id="status"></div>
+        
+        <hr>
+        <h3>Or paste CSV data here:</h3>
+        <textarea id="csvData" placeholder="Paste CSV data here...">Register No,Name,Password,Batch,Year
+2313181058101,M Abdul Muquthadir,2313181058101,B,3rd
+2313181058102,Abrar S,2313181058102,B,3rd
+2313181058103,Ahmed Thariq,2313181058103,B,3rd
+2313181058106,Akbar,2313181058106,B,3rd
+2313181058108,Ashwin R,2313181058108,B,3rd
+2313181058109,S Ibrahim,2313181058109,B,3rd
+2313181058110,Khader Shariqef I,2313181058110,B,3rd
+2313181058111,K Mohamed Sardhar,2313181058111,B,3rd
+2313181058112,F Mohamed Aahil,2313181058112,B,3rd
+2313181058113,Mohamed Aslam,2313181058113,B,3rd
+2313181058114,Mohamed Azeem M,2313181058114,B,3rd
+2313181058117,Mohamed Fowze,2313181058117,B,3rd
+2313181058119,S Mohammed Fahad,2313181058119,B,3rd
+2313181058120,Nithish M,2313181058120,B,3rd
+2313181058121,A Riyas Khan,2313181058121,B,3rd
+2313181058122,S Sameer Ahmed,2313181058122,B,3rd
+2313181058126,Shek Ameen A,2313181058126,B,3rd
+2313181058129,Wasim Khan F,2313181058129,B,3rd
+2313181058130,Zaheer Khan J,2313181058130,B,3rd
+2313181058131,A Zakir Ahamed,2313181058131,B,3rd
+2313181058132,L T Abubacker Siddiq,2313181058132,B,3rd
+2313181058135,Mohammed Abbas S,2313181058135,B,3rd
+2313181058136,Mohamed Ibrahim.K,2313181058136,B,3rd
+2313181058138,Mohammed Muzafar Shariff K,2313181058138,B,3rd
+2313181058139,Muhammad Sheriff,2313181058139,B,3rd
+2313181058140,Muhammadh Zaidh M,2313181058140,B,3rd
+2313181058142,Mohamed Basith S,2313181058142,B,3rd
+2313181058143,Mohammed Shoib Alam,2313181058143,B,3rd
+2313181058144,Shahulhameed,2313181058144,B,3rd
+2313181058146,Syed Sameer Sidiq S K,2313181058146,B,3rd
+2313181058147,N Salman Gurshid,2313181058147,B,3rd
+2313181058148,Mohamed Kaleel K,2313181058148,B,3rd
+2313181058149,K Ahamed Haneef,2313181058149,B,3rd
+2313181058150,Mohammed Sharique Asad,2313181058150,B,3rd
+2313181058151,Mohammed Saifullah.S,2313181058151,B,3rd
+2313181058153,Danish,2313181058153,B,3rd
+2313181058154,A Shajakhqn,2313181058154,B,3rd
+2313181058156,M A Aadil Hussain,2313181058156,B,3rd
+2313181058157,Harif Hussain,2313181058157,B,3rd
+2313181058158,U Ameer Khan,2313181058158,B,3rd
+2313181058159,Muheeb Basha H,2313181058159,B,3rd
+2313181058160,Habeeb Razeen,2313181058160,B,3rd
+2313181058161,S Mohamed Bilal,2313181058161,B,3rd</textarea>
+        <br>
+        <button onclick="importFromCSV()">📤 Import from CSV</button>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDUdv62x0byBLjaTb9i2k_yB5-RVEF3s8M",
+            authDomain: "attendance-app-dfa79.firebaseapp.com",
+            projectId: "attendance-app-dfa79",
+            storageBucket: "attendance-app-dfa79.firebasestorage.app",
+            messagingSenderId: "713117014534",
+            appId: "1:713117014534:web:56edbc2c1b88b0611a0187"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function showStatus(message, isError = false) {
+            document.getElementById('status').innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
+        }
+
+        async function importAllStudents() {
+            showStatus('⏳ Importing students...');
+            
+            const students = [
+                { reg: '2313181058101', name: 'M Abdul Muquthadir', password: '2313181058101', batch: 'B', year: '3rd' },
+                { reg: '2313181058102', name: 'Abrar S', password: '2313181058102', batch: 'B', year: '3rd' },
+                { reg: '2313181058103', name: 'Ahmed Thariq', password: '2313181058103', batch: 'B', year: '3rd' },
+                { reg: '2313181058106', name: 'Akbar', password: '2313181058106', batch: 'B', year: '3rd' },
+                { reg: '2313181058108', name: 'Ashwin R', password: '2313181058108', batch: 'B', year: '3rd' },
+                { reg: '2313181058109', name: 'S Ibrahim', password: '2313181058109', batch: 'B', year: '3rd' },
+                { reg: '2313181058110', name: 'Khader Shariqef I', password: '2313181058110', batch: 'B', year: '3rd' },
+                { reg: '2313181058111', name: 'K Mohamed Sardhar', password: '2313181058111', batch: 'B', year: '3rd' },
+                { reg: '2313181058112', name: 'F Mohamed Aahil', password: '2313181058112', batch: 'B', year: '3rd' },
+                { reg: '2313181058113', name: 'Mohamed Aslam', password: '2313181058113', batch: 'B', year: '3rd' },
+                { reg: '2313181058114', name: 'Mohamed Azeem M', password: '2313181058114', batch: 'B', year: '3rd' },
+                { reg: '2313181058117', name: 'Mohamed Fowze', password: '2313181058117', batch: 'B', year: '3rd' },
+                { reg: '2313181058119', name: 'S Mohammed Fahad', password: '2313181058119', batch: 'B', year: '3rd' },
+                { reg: '2313181058120', name: 'Nithish M', password: '2313181058120', batch: 'B', year: '3rd' },
+                { reg: '2313181058121', name: 'A Riyas Khan', password: '2313181058121', batch: 'B', year: '3rd' },
+                { reg: '2313181058122', name: 'S Sameer Ahmed', password: '2313181058122', batch: 'B', year: '3rd' },
+                { reg: '2313181058126', name: 'Shek Ameen A', password: '2313181058126', batch: 'B', year: '3rd' },
+                { reg: '2313181058129', name: 'Wasim Khan F', password: '2313181058129', batch: 'B', year: '3rd' },
+                { reg: '2313181058130', name: 'Zaheer Khan J', password: '2313181058130', batch: 'B', year: '3rd' },
+                { reg: '2313181058131', name: 'A Zakir Ahamed', password: '2313181058131', batch: 'B', year: '3rd' },
+                { reg: '2313181058132', name: 'L T Abubacker Siddiq', password: '2313181058132', batch: 'B', year: '3rd' },
+                { reg: '2313181058135', name: 'Mohammed Abbas S', password: '2313181058135', batch: 'B', year: '3rd' },
+                { reg: '2313181058136', name: 'Mohamed Ibrahim.K', password: '2313181058136', batch: 'B', year: '3rd' },
+                { reg: '2313181058138', name: 'Mohammed Muzafar Shariff K', password: '2313181058138', batch: 'B', year: '3rd' },
+                { reg: '2313181058139', name: 'Muhammad Sheriff', password: '2313181058139', batch: 'B', year: '3rd' },
+                { reg: '2313181058140', name: 'Muhammadh Zaidh M', password: '2313181058140', batch: 'B', year: '3rd' },
+                { reg: '2313181058142', name: 'Mohamed Basith S', password: '2313181058142', batch: 'B', year: '3rd' },
+                { reg: '2313181058143', name: 'Mohammed Shoib Alam', password: '2313181058143', batch: 'B', year: '3rd' },
+                { reg: '2313181058144', name: 'Shahulhameed', password: '2313181058144', batch: 'B', year: '3rd' },
+                { reg: '2313181058146', name: 'Syed Sameer Sidiq S K', password: '2313181058146', batch: 'B', year: '3rd' },
+                { reg: '2313181058147', name: 'N Salman Gurshid', password: '2313181058147', batch: 'B', year: '3rd' },
+                { reg: '2313181058148', name: 'Mohamed Kaleel K', password: '2313181058148', batch: 'B', year: '3rd' },
+                { reg: '2313181058149', name: 'K Ahamed Haneef', password: '2313181058149', batch: 'B', year: '3rd' },
+                { reg: '2313181058150', name: 'Mohammed Sharique Asad', password: '2313181058150', batch: 'B', year: '3rd' },
+                { reg: '2313181058151', name: 'Mohammed Saifullah.S', password: '2313181058151', batch: 'B', year: '3rd' },
+                { reg: '2313181058153', name: 'Danish', password: '2313181058153', batch: 'B', year: '3rd' },
+                { reg: '2313181058154', name: 'A Shajakhqn', password: '2313181058154', batch: 'B', year: '3rd' },
+                { reg: '2313181058156', name: 'M A Aadil Hussain', password: '2313181058156', batch: 'B', year: '3rd' },
+                { reg: '2313181058157', name: 'Harif Hussain', password: '2313181058157', batch: 'B', year: '3rd' },
+                { reg: '2313181058158', name: 'U Ameer Khan', password: '2313181058158', batch: 'B', year: '3rd' },
+                { reg: '2313181058159', name: 'Muheeb Basha H', password: '2313181058159', batch: 'B', year: '3rd' },
+                { reg: '2313181058160', name: 'Habeeb Razeen', password: '2313181058160', batch: 'B', year: '3rd' },
+                { reg: '2313181058161', name: 'S Mohamed Bilal', password: '2313181058161', batch: 'B', year: '3rd' }
+            ];
+
+            try {
+                const batch = db.batch();
+                
+                students.forEach(student => {
+                    const docRef = db.collection('students').doc();
+                    batch.set(docRef, student);
+                });
+                
+                await batch.commit();
+                showStatus(`✅ Successfully imported ${students.length} students to Firebase!`);
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, true);
+                console.error(error);
+            }
+        }
+
+        async function importFromCSV() {
+            const csvText = document.getElementById('csvData').value;
+            const lines = csvText.split('\n');
+            
+            if (lines.length < 2) {
+                showStatus('❌ No data found', true);
+                return;
+            }
+
+            const headers = lines[0].split(',').map(h => h.trim());
+            const students = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const values = lines[i].split(',').map(v => v.trim());
+                const student = {};
+                
+                headers.forEach((header, index) => {
+                    student[header.toLowerCase()] = values[index];
+                });
+                
+                if (student['register no'] && student['name']) {
+                    students.push({
+                        reg: student['register no'],
+                        name: student['name'],
+                        password: student['password'] || student['register no'],
+                        batch: student['batch'] || 'A',
+                        year: student['year'] || '1st'
+                    });
+                }
+            }
+
+            if (students.length === 0) {
+                showStatus('❌ No valid students found', true);
+                return;
+            }
+
+            showStatus(`⏳ Importing ${students.length} students...`);
+
+            try {
+                const batch = db.batch();
+                students.forEach(student => {
+                    const docRef = db.collection('students').doc();
+                    batch.set(docRef, student);
+                });
+                
+                await batch.commit();
+                showStatus(`✅ Successfully imported ${students.length} students!`);
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

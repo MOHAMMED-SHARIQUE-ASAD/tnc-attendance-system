@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Import Courses to Firebase</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <button onclick="importCourses()">Import Courses</button>
+    <div id="status"></div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDUdv62x0byBLjaTb9i2k_yB5-RVEF3s8M",
+            authDomain: "attendance-app-dfa79.firebaseapp.com",
+            projectId: "attendance-app-dfa79",
+            storageBucket: "attendance-app-dfa79.firebasestorage.app",
+            messagingSenderId: "713117014534",
+            appId: "1:713117014534:web:56edbc2c1b88b0611a0187"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function importCourses() {
+            const courses = [
+                { id: 1, code: '20BJM608', name: 'Programming in ASP.NET', faculty: 'M M Syed Sulaiman', totalHours: 50 },
+                { id: 2, code: '20BJM609', name: 'Operating Systems', faculty: 'N Anver Hussain', totalHours: 57 },
+                { id: 3, code: '20BJMP607', name: 'Programming in ASP.NET PRACTICAL – VII', faculty: 'Dr. S. SAKTHIVEL', totalHours: 65 },
+                { id: 4, code: '20BJM610', name: 'Internet of Things', faculty: 'Dr. G NAJEEB AHMED', totalHours: 37 },
+                { id: 5, code: '20BJMQ601', name: 'Mini Project', faculty: 'Dr. J. Abdul Rasheedh', totalHours: 35 }
+            ];
+
+            const batch = db.batch();
+            courses.forEach(course => {
+                const docRef = db.collection('courses').doc();
+                batch.set(docRef, course);
+            });
+            await batch.commit();
+            document.getElementById('status').innerHTML = '✅ Courses imported!';
+        }
+    </script>
+</body>
+</html>
